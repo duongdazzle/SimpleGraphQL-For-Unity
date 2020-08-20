@@ -47,6 +47,16 @@ namespace SimpleGraphQL
             RunningSubscriptions = new HashSet<string>();
         }
 
+        public async Task<string> SendAsync(
+            Query query,
+            string authToken = null,
+            Dictionary<string, object> variables = null,
+            Dictionary<string, string> headers = null
+        )
+        {
+            return await SendAsync(query, AuthScheme, authToken, variables, headers);
+        }
+
         /// <summary>
         /// Send a query!
         /// </summary>
@@ -61,7 +71,9 @@ namespace SimpleGraphQL
             JsonSerializerSettings serializerSettings = null,
             Dictionary<string, string> headers = null,
             string authToken = null,
-            string authScheme = null
+            string authScheme = null,
+            Dictionary<string, object> variables = null,
+            Dictionary<string, string> headers = null
         )
         {
             if (CustomHeaders != null)
@@ -197,6 +209,24 @@ namespace SimpleGraphQL
             string authToken = null,
             string authScheme = null,
             string protocol = "graphql-ws"
+        public async Task<bool> SubscribeAsync(
+            Query query,
+            string id,
+            string authToken = null,
+            Dictionary<string, object> variables = null,
+            Dictionary<string, string> headers = null
+        )
+        {
+            return await SubscribeAsync(query, id, AuthScheme, authToken, variables, headers);
+        }
+
+        public async Task<bool> SubscribeAsync(
+            Query query,
+            string id,
+            string authScheme = "Bearer",
+            string authToken = null,
+            Dictionary<string, object> variables = null,
+            Dictionary<string, string> headers = null
         )
         {
             if (CustomHeaders != null)
@@ -247,6 +277,7 @@ namespace SimpleGraphQL
         public async Task Unsubscribe(Request request)
         {
             await Unsubscribe(request.Query.ToMurmur2Hash().ToString());
+            return await HttpUtils.WebSocketSubscribe(id, query, variables);
         }
 
         /// <summary>
@@ -281,6 +312,7 @@ namespace SimpleGraphQL
                 await HttpUtils.WebSocketDisconnect();
                 Debug.Log("connection closed");
             }
+            await HttpUtils.WebSocketUnsubscribe(id);
         }
 
         /// <summary>

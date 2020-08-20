@@ -57,7 +57,9 @@ namespace SimpleGraphQL
             JsonSerializerSettings serializerSettings = null,
             Dictionary<string, string> headers = null,
             string authToken = null,
-            string authScheme = null
+            string authScheme = null,
+            Dictionary<string, object> variables = null,
+            Dictionary<string, string> headers = null
         )
         {
             var uri = new Uri(url);
@@ -235,7 +237,12 @@ namespace SimpleGraphQL
         /// <param name="id">Used to identify the subscription. Must be unique per query.</param>
         /// <param name="request">The subscription query.</param>
         /// <returns>true if successful</returns>
-        public static async Task<bool> WebSocketSubscribe(string id, Request request)
+        public static async Task<bool> WebSocketSubscribe(
+            string id, 
+            Request request,
+            Query query,
+            Dictionary<string, object> variables
+        )
         {
             if (!IsWebSocketReady())
             {
