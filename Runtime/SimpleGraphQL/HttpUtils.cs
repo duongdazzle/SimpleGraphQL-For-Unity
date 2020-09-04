@@ -165,10 +165,9 @@ namespace SimpleGraphQL
                 }
                 else
                 {
-                    _webSocket.Options.SetRequestHeader("Authorization", $"{authScheme} {authToken}");
+                    _webSocket.Options.SetRequestHeader("X-Authorization", $"{authScheme} {authToken}");
                 }
             }
-
 
             if (headers != null)
             {
