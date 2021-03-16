@@ -76,11 +76,20 @@ namespace SimpleGraphQL
             Dictionary<string, string> headers = null
         )
         {
-            if (CustomHeaders != null)
+            if(query.OperationType == OperationType.Subscription)
             {
-                if (headers == null) headers = new Dictionary<string, string>();
+                Debug.LogError("Operation Type should not be a subscription!");
+                return null;
+            }
 
-                foreach (KeyValuePair<string, string> header in CustomHeaders)
+            if(CustomHeaders != null)
+            {
+                if(headers == null)
+                {
+                    headers = new Dictionary<string, string>();
+                }
+
+                foreach(KeyValuePair<string, string> header in CustomHeaders)
                 {
                     headers.Add(header.Key, header.Value);
                 }
@@ -149,6 +158,9 @@ namespace SimpleGraphQL
         {
             RegisterListener(request.Query.ToMurmur2Hash().ToString(), listener);
         }
+        
+        /// <param name="listener">Data listener to register</param>
+        public void RegisterSubscriptionDataListener(Action<string> listener) => HttpUtils.SubscriptionDataReceived += listener;
 
         /// <summary>
         /// Unregisters a listener for subscriptions.
@@ -158,6 +170,21 @@ namespace SimpleGraphQL
         {
             HttpUtils.SubscriptionDataReceived -= listener;
         }
+        
+        /// <param name="listener">Data listener to unregister</param>
+        public void UnregisterSubscriptionDataListener(Action<string> listener) => HttpUtils.SubscriptionDataReceived -= listener;
+
+        /// <summary>
+        /// Registers a listener for subscription errors.
+        /// </summary>
+        /// <param name="listener"Error listener to register></param>
+        public void RegisterSubscriptionErrorListener(Action<SubscriptionError, string> listener) => HttpUtils.SubscriptionErrorOccured += listener;
+
+        /// <summary>
+        /// Unregisters a listener from subscription errors.
+        /// </summary>
+        /// <param name="listener">Error listener to unregisetr</param>
+        public void UnregisterSubscriptionErrorListener(Action<SubscriptionError, string> listener) => HttpUtils.SubscriptionErrorOccured -= listener;
 
         public void UnregisterListener(string id, Action<string> listener)
         {
@@ -175,26 +202,6 @@ namespace SimpleGraphQL
         /// <summary>
         /// Subscribe to a query in GraphQL.
         /// </summary>
-        /// <param name="request">The request you are sending.</param>
-        /// <param name="headers"></param>
-        /// <param name="authToken"></param>
-        /// <param name="authScheme"></param>
-        /// <param name="protocol"></param>
-        /// <returns>True if successful</returns>
-        public async Task<bool> Subscribe(
-            Request request,
-            Dictionary<string, string> headers = null,
-            string authToken = null,
-            string authScheme = null,
-            string protocol = "graphql-ws"
-        )
-        {
-            return await Subscribe(request.Query.ToMurmur2Hash().ToString(), request, headers, authToken, authScheme, protocol);
-        }
-
-        /// <summary>
-        /// Subscribe to a query in GraphQL.
-        /// </summary>
         /// <param name="id">A custom id to pass.</param>
         /// <param name="request"></param>
         /// <param name="headers"></param>
@@ -203,20 +210,14 @@ namespace SimpleGraphQL
         /// <param name="protocol"></param>
         /// <returns>True if successful</returns>
         public async Task<bool> Subscribe(
-            string id,
             Request request,
             Dictionary<string, string> headers = null,
             string authToken = null,
             string authScheme = null,
             string protocol = "graphql-ws"
-        public async Task<bool> SubscribeAsync(
-            Query query,
-            string id,
-            string authToken = null,
-            Dictionary<string, object> variables = null,
-            Dictionary<string, string> headers = null
         )
         {
+            //return await Subscribe(request.Query.ToMurmur2Hash().ToString(), request, headers, authToken, authScheme, protocol);
             return await SubscribeAsync(query, id, AuthScheme, authToken, variables, headers);
         }
 
@@ -229,11 +230,20 @@ namespace SimpleGraphQL
             Dictionary<string, string> headers = null
         )
         {
-            if (CustomHeaders != null)
+            if(query.OperationType != OperationType.Subscription)
             {
-                if (headers == null) headers = new Dictionary<string, string>();
+                Debug.LogError("Operation Type should be a subscription!");
+                return false;
+            }
 
-                foreach (KeyValuePair<string, string> header in CustomHeaders)
+            if(CustomHeaders != null)
+            {
+                if(headers == null)
+                {
+                    headers = new Dictionary<string, string>();
+                }
+
+                foreach(KeyValuePair<string, string> header in CustomHeaders)
                 {
                     headers.Add(header.Key, header.Value);
                 }
@@ -242,6 +252,16 @@ namespace SimpleGraphQL
             if (authScheme == null)
             {
                 authScheme = AuthScheme;
+            }
+            
+            if(!HttpUtils.IsWebSocketReady())
+            {
+                // Prepare the socket before continuing.
+                bool connectionSuccessful = await HttpUtils.WebSocketConnect(Endpoint, authScheme, authToken, "graphql-ws", headers);
+                if(!connectionSuccessful)
+                {
+                    return false;
+                }
             }
 
             if (!HttpUtils.IsWebSocketReady())
@@ -286,7 +306,7 @@ namespace SimpleGraphQL
         /// <param name="id"></param>
         public async Task Unsubscribe(string id)
         {
-            if (!HttpUtils.IsWebSocketReady())
+            if(!HttpUtils.IsWebSocketReady())
             {
                 // Socket is already apparently closed, so this wouldn't work anyways.
                 return;
