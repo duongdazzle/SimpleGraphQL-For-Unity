@@ -387,6 +387,7 @@ namespace SimpleGraphQL
                 catch(Exception e)
                 {
                     Debug.LogError($"Socket failure:\n{e.Message}");
+                    ClearWebSocket();
                     SubscriptionErrorOccured?.Invoke(SubscriptionError.SocketFailure, e.ToString());
                     break;
                 }
@@ -405,6 +406,7 @@ namespace SimpleGraphQL
                 catch(JsonReaderException e)
                 {
                     Debug.LogError($"Socket failure:\n{e.Message}");
+                    await WebSocketDisconnect();
                     SubscriptionErrorOccured?.Invoke(SubscriptionError.InvalidPayload, e.ToString());
                     break;
                 }
