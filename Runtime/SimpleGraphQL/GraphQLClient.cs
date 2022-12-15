@@ -198,6 +198,9 @@ namespace SimpleGraphQL
         {
             UnregisterListener(request.Query.ToMurmur2Hash().ToString(), listener);
         }
+        public void RegisterWebSocketUpdatedStoppedListener(Action<WebSocketUpdateStoppedReason> listener) => HttpUtils.WebSocketUpdateStopped += listener;
+
+        public void UnregisterWebSocketUpdatedStoppedListener(Action<WebSocketUpdateStoppedReason> listener) => HttpUtils.WebSocketUpdateStopped -= listener;
 
         /// <summary>
         /// Subscribe to a query in GraphQL.

@@ -18,6 +18,15 @@ namespace SimpleGraphQL
         InvalidPayload
     }
 
+    public enum WebSocketUpdateStoppedReason
+    {
+        SocketReadFailure,
+        InvalidPayload,
+        NoDataReceived,
+        ServerDoneSendingData,
+        UnsupportedPayloadSubTypeReceived
+    }
+
     [PublicAPI]
     public static class HttpUtils
     {
@@ -34,6 +43,7 @@ namespace SimpleGraphQL
         internal static event Action<SubscriptionError, string> SubscriptionErrorOccured;
 
         public static Dictionary<string, Action<string>> SubscriptionDataReceivedPerChannel;
+        internal static event Action<WebSocketUpdateStoppedReason> WebSocketUpdateStopped;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         public static void PreInit()
@@ -386,8 +396,9 @@ namespace SimpleGraphQL
                 }
                 catch(Exception e)
                 {
-                    Debug.LogError($"Socket failure:\n{e.Message}");
+                    Debug.LogError($"Web socket failure:\n{e.Message}");
                     ClearWebSocket();
+                    WebSocketUpdateStopped?.Invoke(WebSocketUpdateStoppedReason.SocketReadFailure);
                     SubscriptionErrorOccured?.Invoke(SubscriptionError.SocketFailure, e.ToString());
                     break;
                 }
@@ -395,6 +406,7 @@ namespace SimpleGraphQL
                 string jsonResult = jsonBuild.ToString();
                 if(string.IsNullOrEmpty(jsonResult))
                 {
+                    WebSocketUpdateStopped?.Invoke(WebSocketUpdateStoppedReason.NoDataReceived);
                     return;
                 }
 
@@ -405,8 +417,9 @@ namespace SimpleGraphQL
                 }
                 catch(JsonReaderException e)
                 {
-                    Debug.LogError($"Socket failure:\n{e.Message}");
+                    Debug.LogError($"Web socket failure:\n{e.Message}");
                     await WebSocketDisconnect();
+                    WebSocketUpdateStopped?.Invoke(WebSocketUpdateStoppedReason.InvalidPayload);
                     SubscriptionErrorOccured?.Invoke(SubscriptionError.InvalidPayload, e.ToString());
                     break;
                 }
@@ -459,10 +472,11 @@ namespace SimpleGraphQL
                             throw new WebSocketException("Handshake error. Error: " + jsonResult);
                         }
                     case "complete":
-                        {
-                            Debug.Log("Server sent complete, it's done sending data.");
-                            continue;
-                        }
+                    {
+                        Debug.Log("Server sent complete, it's done sending data.");
+                        WebSocketUpdateStopped?.Invoke(WebSocketUpdateStoppedReason.ServerDoneSendingData);
+                        break;
+                    }
                     case "ka":
                         {
                             // stayin' alive, stayin' alive
@@ -484,6 +498,7 @@ namespace SimpleGraphQL
                         }
                 }
 
+                WebSocketUpdateStopped?.Invoke(WebSocketUpdateStoppedReason.UnsupportedPayloadSubTypeReceived);
                 break;
             }
         }
