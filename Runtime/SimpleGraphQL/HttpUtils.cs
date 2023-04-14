@@ -76,7 +76,6 @@ namespace SimpleGraphQL
             string url,
             Request request,
             JsonSerializerSettings serializerSettings = null,
-            Dictionary<string, string> headers = null,
             string authToken = null,
             string authScheme = null,
             Dictionary<string, object> variables = null,
@@ -87,38 +86,28 @@ namespace SimpleGraphQL
 
             byte[] payload = request.ToBytes(serializerSettings);
 
-            using (var webRequest = new UnityWebRequest(uri, "POST")
-            {
-                uploadHandler = new UploadHandlerRaw(payload),
-                downloadHandler = new DownloadHandlerBuffer(),
-                disposeCertificateHandlerOnDispose = true,
-                disposeDownloadHandlerOnDispose = true,
-                disposeUploadHandlerOnDispose = true
-            })
+            using(var webRequest = new UnityWebRequest(uri, "POST")
+                  {
+                      uploadHandler = new UploadHandlerRaw(payload),
+                      downloadHandler = new DownloadHandlerBuffer(),
+                      disposeCertificateHandlerOnDispose = true,
+                      disposeDownloadHandlerOnDispose = true,
+                      disposeUploadHandlerOnDispose = true
+                  })
             {
 
-            if(authToken != null)
-            {
-                request.SetRequestHeader("Authorization", $"{authScheme} {authToken}");
-            }
-
-            request.SetRequestHeader("Content-Type", "application/json");
-
-            if(headers != null)
-            {
-                foreach(KeyValuePair<string, string> header in headers)
+                if(authToken != null)
                 {
-                    request.SetRequestHeader(header.Key, header.Value);
+                    webRequest.SetRequestHeader("Authorization", $"{authScheme} {authToken}");
                 }
-            }
 
                 webRequest.SetRequestHeader("Content-Type", "application/json");
 
-                while(!request.isDone)
+                if(headers != null)
                 {
-                    foreach (KeyValuePair<string, string> header in headers)
+                    foreach(KeyValuePair<string, string> header in headers)
                     {
-                        webRequest.SetRequestHeader(header.Key, header.Value);
+                        request.SetRequestHeader(header.Key, header.Value);
                     }
                 }
 
@@ -126,12 +115,12 @@ namespace SimpleGraphQL
                 {
                     webRequest.SendWebRequest();
 
-                    while (!webRequest.isDone)
+                    while(!webRequest.isDone)
                     {
                         await Task.Yield();
                     }
                 }
-                catch (Exception e)
+                catch(Exception e)
                 {
                     Debug.LogError("[SimpleGraphQL] " + e);
                     throw new UnityWebRequestException(webRequest);
@@ -150,12 +139,6 @@ namespace SimpleGraphQL
 #endif
 
                 return webRequest.downloadHandler.text;
-                return request.downloadHandler.text;
-            }
-            catch(Exception e)
-            {
-                Debug.LogError("[SimpleGraphQL] " + e);
-                return null;
             }
         }
 
@@ -438,19 +421,6 @@ namespace SimpleGraphQL
                         continue;
                     }
                     case "data":
-                    {
-                        JToken jToken = jsonObj["payload"];
-
-                        if(jToken != null)
-                        {
-                            throw new WebSocketException("Connection error. Error: " + jsonResult);
-                        }
-                    case "connection_ack":
-                        {
-                            Debug.Log($"Websocket connection acknowledged ({id}).");
-                            continue;
-                        }
-                    case "data":
                     case "next":
                         {
                             JToken jToken = jsonObj["payload"];
@@ -463,6 +433,10 @@ namespace SimpleGraphQL
                                 {
                                     SubscriptionDataReceivedPerChannel?[id]?.Invoke(jToken.ToString());
                                 }
+                            }
+                            else
+                            {
+                                throw new WebSocketException("Connection error. Error: " + jsonResult);
                             }
 
                             continue;

@@ -69,7 +69,6 @@ namespace SimpleGraphQL
         public async Task<string> Send(
             Request request,
             JsonSerializerSettings serializerSettings = null,
-            Dictionary<string, string> headers = null,
             string authToken = null,
             string authScheme = null,
             Dictionary<string, object> variables = null,
